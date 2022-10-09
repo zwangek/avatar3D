@@ -3,23 +3,31 @@ import pickle
 import sys
 import os
 import argparse
+import torch.nn.functional as F
+import imageio
 
 ### convert DensePose pickle into npy file ###
 def convert_densepose(pkl_path, output_dir):
-    sys.path.append('./dependencies/detectron2/projects/DensePose')
+    sys.path.append('./dependencies/DensePose')
     
     with open(pkl_path, 'rb') as f:
         data = pickle.load(f)
 
     for entry in data:
         filename = entry['file_name']
-        filename = os.path.split(filename)[-1].split('.')[0]
 
-        i = entry['pred_densepose'][0].labels.cpu().numpy()
-        uv = entry['pred_densepose'][0].uv.cpu().numpy()
+        i = entry['pred_densepose'][0].labels.unsqueeze(0)
+        uv = entry['pred_densepose'][0].uv
 
-        iuv = np.concatenate((i.reshape(1, i.shape[0], i.shape[1]),uv), axis=0)
-        np.save(f'{output_dir}/{filename}.npy', iuv)
+        ori_image = imageio.imread(filename)
+        h,w,_ = ori_image.shape
+
+        i = F.interpolate(i.unsqueeze(0).float(), size=(h,w), mode='bilinear').squeeze(0).cpu().numpy()
+        uv = F.interpolate(uv.unsqueeze(0).float(), size=(h,w), mode='bilinear').squeeze(0).cpu().numpy()
+
+
+        iuv = np.concatenate((i,uv), axis=0)
+        np.save(f"{output_dir}/{os.path.split(filename)[-1].split('.')[0]}.npy", iuv.astype(np.float32))
 
 
 if __name__ == '__main__':
