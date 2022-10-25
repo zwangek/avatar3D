@@ -1,44 +1,46 @@
-import numpy as np
-import pickle
-import sys
+import json
 import os
+
+import cv2
+import numpy as np
 import torch.nn.functional as F
-import imageio
-import detectron2
+from densepose import add_densepose_config
+from densepose.vis.extractor import DensePoseResultExtractor
+from detectron2 import model_zoo
+from detectron2.config import get_cfg
+from detectron2.engine import DefaultPredictor
 
-### convert DensePose pickle into npy file ###
-def convert_densepose(pkl_path, output_dir):
-    sys.path.append('./dependencies/detectron2/projects/DensePose')
+
+def get_denspose(img_dir, output_dir):
+    cfg = get_cfg()
+    add_densepose_config(cfg)
+    cfg.merge_from_file('/home/wzy/workspace/avatar3D/dependencies/detectron2/projects/DensePose/configs/densepose_rcnn_R_101_FPN_DL_WC1M_s1x.yaml')
+    cfg.MODEL.WEIGHTS = 'https://dl.fbaipublicfiles.com/densepose/densepose_rcnn_R_101_FPN_DL_WC1M_s1x/216245771/model_final_0ebeb3.pkl'
     
-    with open(pkl_path, 'rb') as f:
-        data = pickle.load(f)
+    predictor = DefaultPredictor(cfg)
+    extractor = DensePoseResultExtractor()
 
-    for entry in data:
-        file_path = entry['file_name']
+    for img_file in os.listdir(img_dir):
+        image_name, postfix = img_file.split('.')
+        img = cv2.imread(img_dir + '/' + img_file)
+        ih,iw,ic = img.shape
 
-        i = entry['pred_densepose'][0].labels.unsqueeze(0)
-        uv = entry['pred_densepose'][0].uv
+        outputs = predictor(img)['instances']
 
-        ori_image = imageio.imread(file_path)
-        h,w,_ = ori_image.shape
+        dp, bbox_xywh = (item[0] for item in extractor(outputs))
+        x,y,w,h = (int(i) for i in bbox_xywh)
 
-        i = F.interpolate(i.unsqueeze(0).float(), size=(h,w), mode='bilinear').squeeze(0).cpu().numpy()
-        uv = F.interpolate(uv.unsqueeze(0).float(), size=(h,w), mode='bilinear').squeeze(0).cpu().numpy()
-
+        i = dp.labels.unsqueeze(0).cpu().numpy()
+        uv = dp.uv.cpu().numpy()
         iuv = np.concatenate((i,uv), axis=0)
-        file_name = os.path.split(file_path)[-1].split('.')[0]
-        np.save(f"{output_dir}/{file_name}.npy", iuv.astype(np.float32))
+
+        iuv = np.pad(iuv, ((0,0), (y, ih-h-y), (x, iw-w-x)), mode='constant', constant_values=0)
+        np.save(f"{output_dir}/{image_name}.npy", iuv.astype(np.float32))
 
 def get_keypoints(img_dir, output_dir):
-    from detectron2 import model_zoo
-    from detectron2.config import get_cfg
-    from detectron2.engine import DefaultPredictor
-    import cv2
-    import json
-
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file('COCO-Keypoints/keypoint_rcnn_R_101_FPN_3x.yaml'))
-    cfg.MODEL.WEIGHTS = 'https://dl.fbaipublicfiles.com/detectron2/COCO-Keypoints/keypoint_rcnn_R_101_FPN_3x/138363331/model_final_997cc7.pkl'
+    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url('COCO-Keypoints/keypoint_rcnn_R_101_FPN_3x.yaml')
 
     predictor = DefaultPredictor(cfg)
 
@@ -107,7 +109,6 @@ def get_keypoints(img_dir, output_dir):
                 arr[kp18_dict[k]] = coco[coco_dict[k]]
         
             arr[1] = (arr[kp18_dict['left_shoulder']] + arr[kp18_dict['right_shoulder']]) / 2
-
             return arr
 
         for people in keypoints:
@@ -124,11 +125,9 @@ def get_keypoints(img_dir, output_dir):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pkl-path', type=str, help="path to DensePose pickle output", default='./output/preprocess/results.pkl')
-    parser.add_argument('--output-dir', type=str, help="dir to save converted files", default='./data/DCTON/')
-    paser.add_argument('--img-dir', type=str, help="input image directory", default='/home/wzy/workspace/avatar3D/data/DCTON/test_img')
+    parser.add_argument('--output-dir', type=str, help="dir to save converted files", default='./sample_data/DCTON/')
+    parser.add_argument('--img-dir', type=str, help="input image directory", default='./sample_data/DCTON/test_img')
     args = parser.parse_args()
 
-    convert_densepose(args.pkl_path, args.output_dir + 'test_densepose')
-
+    get_denspose(args.img_dir, args.output_dir + 'test_densepose')
     get_keypoints(args.img_dir, args.output_dir + 'test_pose')
