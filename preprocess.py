@@ -26,11 +26,26 @@ def get_denspose(img_dir, output_dir):
         ih,iw,ic = img.shape
 
         outputs = predictor(img)['instances']
-
         dp, bbox_xywh = (item[0] for item in extractor(outputs))
         x,y,w,h = (int(i) for i in bbox_xywh)
 
         i = dp.labels.unsqueeze(0).cpu().numpy()
+
+        ### gen color map as vitonhd
+        # label_map = np.zeros((ih, iw))
+        # mask_bg = np.zeros((ih,iw))
+        # mask_bg[y:y+h, x:x+w][i[0]!=0] = 1 # non zero region
+        # mask_bg = np.tile((mask_bg==0)[:, :, np.newaxis], [1, 1, 3])
+        # label_map[y:y+h, x:x+w] = i[0] * 255 / 24
+        # label_map = cv2.applyColorMap(label_map.astype(np.uint8), cv2.COLORMAP_PARULA)
+        # label_map[mask_bg] = 0
+        # cv2.imwrite('./test.png', label_map)
+
+        ### gen label as dcton
+        # label = np.zeros((ih,iw))
+        # label[y:y+h, x:x+w] = i[0]
+        # cv2.imwrite('./test_label.png', label.astype(np.uint8))
+
         uv = dp.uv.cpu().numpy()
         iuv = np.concatenate((i,uv), axis=0)
 
@@ -113,13 +128,18 @@ def get_keypoints(img_dir, output_dir):
 
         for people in keypoints:
             arr = keypoint_coco_to_18(people)
-            print(arr)
             people_field = people_template.copy()
             people_field['pose_keypoints'] = list(arr.reshape(-1))
             json_string['people'].append(people_field)
 
         with open(f'{output_dir}/{img_name}_keypoints.json', 'w') as f:
             f.write(json.dumps(json_string))
+
+def center_crop(img, target_size=(256,192)):
+    h,w = target_size
+    ih,iw,ic = img.shape
+    
+
 
 
 if __name__ == '__main__':
@@ -129,5 +149,12 @@ if __name__ == '__main__':
     parser.add_argument('--img-dir', type=str, help="input image directory", default='./sample_data/DCTON/test_img')
     args = parser.parse_args()
 
+    print('generating densepose')
     get_denspose(args.img_dir, args.output_dir + 'test_densepose')
+
+    print('generating keypoints')
     get_keypoints(args.img_dir, args.output_dir + 'test_pose')
+
+    print('generating parse')
+    os.system(f'bash ./scripts/gen_parse.sh {args.img_dir} {args.output_dir}/test_label' )
+
