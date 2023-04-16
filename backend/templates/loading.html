@@ -3,13 +3,26 @@
 <html>
   <head>
     <title>Loading</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   </head>
   <body>
-    <h1>Loading</h1>
+    <div id="status">Processing...</div>
     <script>
-      setTimeout(function(){
-        window.location.href = "/result";
-      }, 2000);
+        function checkStatus() {
+          $.ajax({
+            url: '/status',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+              if (response.status === 'done') {
+                window.location.replace("/result");
+                clearInterval(checkStatusInterval);
+              } 
+            }
+          });
+        }
+        
+        var checkStatusInterval = setInterval(checkStatus, 2000);
     </script>
   </body>
 </html>
