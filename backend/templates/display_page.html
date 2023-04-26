@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>3D Model generator result page</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <h1>3D Avatar Generator</h1>
+    <div class="container"> <!--the human image input display-->
+        <div class="window">
+            <img src="{{ url_for('static', filename='input/' + photo_name) }}" alt="Person image"> <!--change src for display image-->
+        </div>
+        <div class="window">
+            <img src="{{ url_for('static', filename='clothes/' + clothes_name) }}" alt="Clothes image"> <!--change src for display image-->  
+        </div>
+    </div>
+    <div class="container">
+        <div id="model-viewer"> <!-- Change the src to the 3D model file -->
+            <model-viewer src="{{ url_for('static', filename='output/' + result_name) }}" ar ar-modes="webxr scene-viewer quick-look" camera-controls poster="poster.webp" shadow-intensity="1"></model-viewer>
+        </div>
+    </div>  
+      
+    <!-- Loads model-viewer for modern browsers -->
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.js"></script>
+    <!-- Loads model-viewer for older browsers -->
+    <script nomodule src="https://unpkg.com/@google/model-viewer/dist/model-viewer-legacy.js"></script>  
+    
+
+    
+  </body>
+</html>
