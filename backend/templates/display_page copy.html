@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>3D Model generator result page</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@v0.151.3/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@v0.151.3/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  </head>
+  <body>
+    <h1>3D Avatar Generator</h1>
+    <div class="container"> <!--the human image input display-->
+        <div class="window">
+            <img src="{{ url_for('static', filename='input/' + photo_name) }}" alt="Person image"> <!--change src for display image-->
+        </div>
+        <div class="window">
+            <img src="{{ url_for('static', filename='clothes/' + clothes_name) }}" alt="Clothes image"> <!--change src for display image-->  
+        </div>
+        <div id="container" width="800" height="800"> </div>
+    </div>
+   
+  
+    <script type="module">
+    import * as THREE from 'three';
+    import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+    import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+    /**
+    * Generate a scene object with a background color
+    **/
+
+    function getScene() {
+      var scene = new THREE.Scene();
+      scene.background = new THREE.Color();
+      return scene;
+    }
+  
+    /**
+    * Generate the camera to be used in the scene. Camera args:
+    *   [0] field of view: identifies the portion of the scene
+    *     visible at any time (in degrees)
+    *   [1] aspect ratio: identifies the aspect ratio of the
+    *     scene in width/height
+    *   [2] near clipping plane: objects closer than the near
+    *     clipping plane are culled from the scene
+    *   [3] far clipping plane: objects farther than the far
+    *     clipping plane are culled from the scene
+    **/
+  
+    function getCamera() {
+      var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+      camera.position.set(0, 1, -10);
+      return camera;
+    }
+  
+    /**
+    * Generate the light to be used in the scene. Light args:
+    *   [0]: Hexadecimal color of the light
+    *   [1]: Numeric value of the light's strength/intensity
+    *   [2]: The distance from the light where the intensity is 0
+    * @param {obj} scene: the current scene object
+    **/
+  
+    function getLight(scene) {
+      var light = new THREE.PointLight(0xffffff, 1, 0);
+      light.position.set(1, 1, 1);
+      scene.add(light);
+  
+      var ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+      return light;
+    }
+  
+    /**
+    * Generate the renderer to be used in the scene
+    **/
+  
+    function getRenderer() {
+      // Create the canvas with a renderer
+      var renderer = new THREE.WebGLRenderer({antialias: true});
+      // Add support for retina displays
+      renderer.setPixelRatio(window.devicePixelRatio);
+      // Specify the size of the canvas
+      renderer.setSize( 800,800 ); 
+      // Add the canvas to the DOM
+      var container = document.getElementById( "container" );
+      container.appendChild(renderer.domElement);
+      return renderer;
+    }
+  
+    /**
+    * Generate the controls to be used in the scene
+    * @param {obj} camera: the three.js camera for the scene
+    * @param {obj} renderer: the three.js renderer for the scene
+    **/
+  
+    function getControls(camera, renderer) {
+      var controls = new TrackballControls(camera, renderer.domElement);
+      controls.zoomSpeed = 1;
+      controls.panSpeed = 1;
+      return controls;
+    }
+  
+    /**
+    * Load Nimrud model
+    **/
+  
+    function loadModel() {
+      var loader = new OBJLoader();
+      loader.load( "{{ url_for('static', filename='output/' + result_name) }}", function ( object ) {
+        object.rotation.z = Math.PI;
+        scene.add( object );
+        //document.querySelector('h1').style.display = 'none';
+      } );
+    }
+  
+    /**
+    * Render!
+    **/
+  
+    function render() {
+      requestAnimationFrame(render);
+      renderer.render(scene, camera);
+      controls.update();
+    };
+  
+    var scene = getScene();
+    var camera = getCamera();
+    var light = getLight(scene);
+    var renderer = getRenderer();
+    var controls = getControls(camera, renderer);
+  
+    loadModel()
+  
+    render();
+    </script>
+    
+  </body>
+</html>
+

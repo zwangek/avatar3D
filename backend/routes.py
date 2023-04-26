@@ -33,17 +33,21 @@ def upload():
         clothes_filenames = os.listdir(clothes_folder)
         print(clothes_folder)
         print(clothes_filenames)
-        return render_template('index.html', clothes_filenames=clothes_filenames)
+        return render_template('interface.html', clothes_filenames=clothes_filenames)
 
 @app.route('/loading')
 def loading():
-    return render_template('loading.html')
+    return render_template('loading_page.html')
 
 @app.route('/result')
 def result():
-    filename = "result_ryota.obj"
-    file_path = "data/output/" + filename
-    return render_template('result.html', filename=filename)
+    result_name = "result_ryota.obj"
+    with open('input.txt','r') as f:
+        line = f.readline()
+        photo_name = line.split()[0]
+        clothes_name = line.split()[1]
+        
+    return render_template('display_page copy.html', result_name = result_name, photo_name = photo_name, clothes_name = clothes_name)
 
 @app.route('/status')
 def check_status():

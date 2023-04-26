@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>3D Model generator loading page</title>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    </head>
+    <style>
+        body {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        p {
+            text-align: center; 
+            font-size: 1.5em;
+            align-items: center; 
+            justify-content: center;
+        }
+        .loader {
+            border: 16px solid #f3f3f3; /* Light grey */
+            border-top: 16px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 2s linear infinite;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+        }
+    </style>
+    <body>
+        <p>Generating 3D model. Please wait...
+        <div class="loader"></div>
+        </p>
+        <script>
+            function checkStatus() {
+              $.ajax({
+                url: '/status',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                  if (response.status === 'done') {
+                    window.location.replace("/result");
+                    clearInterval(checkStatusInterval);
+                  } 
+                }
+              });
+            }
+            
+            var checkStatusInterval = setInterval(checkStatus, 2000);
+        </script>
+    </body>
+</html>
